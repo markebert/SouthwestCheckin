@@ -25,6 +25,16 @@ import time
 
 CHECKIN_EARLY_SECONDS = 5
 
+def printWithTimestamp(message):
+    # Get the seconds since epoch
+    secondsSinceEpoch = time.time()
+    	
+    # Convert seconds since epoch to struct_time
+    timeObj = time.localtime(secondsSinceEpoch)
+
+    # get the current timestamp elements from struct_time object i.e.
+    print("{}-{}-{} {}:{}:{} - {}".format(timeObj.tm_mon, timeObj.tm_mday, timeObj.tm_year, timeObj.tm_hour, timeObj.tm_min, timeObj.tm_sec, message))
+
 
 def schedule_checkin(flight_time, reservation):
     checkin_time = flight_time - timedelta(days=1)
@@ -36,16 +46,16 @@ def schedule_checkin(flight_time, reservation):
         # pretty print our wait time
         m, s = divmod(delta, 60)
         h, m = divmod(m, 60)
-        print("Too early to check in.  Waiting {} hours, {} minutes, {} seconds".format(trunc(h), trunc(m), s))
+        printWithTimestamp("Too early to check in.  Waiting {} hours, {} minutes, {} seconds".format(trunc(h), trunc(m), s))
         try:
             time.sleep(delta)
         except OverflowError:
-            print("System unable to sleep for that long, try checking in closer to your departure date")
+            printWithTimestamp("System unable to sleep for that long, try checking in closer to your departure date")
             sys.exit(1)
     data = reservation.checkin()
     for flight in data['flights']:
         for doc in flight['passengers']:
-            print("{} got {}{}!".format(doc['name'], doc['boardingGroup'], doc['boardingPosition']))
+            printWithTimestamp("{} got {}{}!".format(doc['name'], doc['boardingGroup'], doc['boardingPosition']))
 
 
 def auto_checkin(reservation_number, first_name, last_name, verbose=False):
@@ -67,7 +77,7 @@ def auto_checkin(reservation_number, first_name, last_name, verbose=False):
         date = airport_tz.localize(datetime.strptime(takeoff, '%Y-%m-%d %H:%M'))
         if date > now:
             # found a flight for checkin!
-            print("Flight information found, departing {} at {}".format(airport, date.strftime('%b %d %I:%M%p')))
+            printWithTimestamp("Flight information found, departing {} at {}".format(airport, date.strftime('%b %d %I:%M%p')))
             # Checkin with a thread
             t = Thread(target=schedule_checkin, args=(date, r))
             t.daemon = True
@@ -80,7 +90,7 @@ def auto_checkin(reservation_number, first_name, last_name, verbose=False):
             break
         for t in threads:
             t.join(5)
-            if not t.isAlive():
+            if not t.is_alive():
                 threads.remove(t)
                 break
 
@@ -96,5 +106,5 @@ if __name__ == '__main__':
     try:
         auto_checkin(reservation_number, first_name, last_name, verbose)
     except KeyboardInterrupt:
-        print("Ctrl+C detected, canceling checkin")
+        printWithTimestamp("Ctrl+C detected, canceling checkin")
         sys.exit()
